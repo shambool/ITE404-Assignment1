@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TO-DO List</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 20px;
+      }
+
+      h1 {
+        color: #333;
+      }
+
+      form {
+        margin-bottom: 20px;
+      }
+
+      #delete {
+        display: inline;
+      }
+
+      input[type="text"],
+      select {
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        width: 200px;
+        margin-right: 10px;
+      }
+
+      button {
+        padding: 10px 15px;
+        background-color: #5cb85c;
+        border: none;
+        border-radius: 4px;
+        color: white;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background-color: #4cae4c;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 12px 15px;
+        border: 1px solid #ccc;
+        text-align: left;
+      }
+
+      th {
+        background-color: #f2f2f2;
+      }
+
+      tr:hover {
+        background-color: #f5f5f5;
+      }
+    </style>
+  </head>
+  <body>
+    <form action="/submit" method="POST">
+      <h1>TO-DO List</h1>
+      <input type="text" name="title" placeholder="Add a new task" required />
+      <input type="date" name="dueDate" placeholder="Add a due date" required />
+
+      <button type="submit">Add</button>
+    </form>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Due-Date</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% tasks.forEach(function(task, index) { %>
+        <tr>
+          <td><%= task.title %></td>
+          <td><%= task.dueDate %></td>
+          <td>
+            <input type="checkbox" <%= task.completed ? 'checked' : '' %> />
+            <form action="/delete" method="POST" id="delete">
+              <input type="hidden" name="index" value="<%= index %>" />
+              <button type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </body>
+</html>
