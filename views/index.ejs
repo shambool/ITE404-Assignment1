@@ -20,6 +20,10 @@
         margin-bottom: 20px;
       }
 
+      #delete {
+        display: inline;
+      }
+
       input[type="text"],
       select {
         padding: 10px;
@@ -81,12 +85,16 @@
         </tr>
       </thead>
       <tbody>
-        <% items.forEach(function(item) { %>
+        <% items.forEach(function(item, index) { %>
         <tr>
           <td><%= item.title %></td>
           <td><%= item.dueDate %></td>
           <td>
             <input type="checkbox" <%= item.completed ? 'checked' : '' %> />
+            <form action="/delete" method="POST" id="delete">
+              <input type="hidden" name="index" value="<%= index %>" />
+              <button type="submit">Delete</button>
+            </form>
           </td>
         </tr>
         <% }); %>
