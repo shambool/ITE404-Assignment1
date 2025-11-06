@@ -16,15 +16,12 @@
         color: #333;
       }
 
-      form {
+      .todo-actions {
         margin-bottom: 20px;
       }
 
-      #delete {
-        display: inline;
-      }
-
       input[type="text"],
+      input[type="date"],
       select {
         padding: 10px;
         border: 1px solid #ccc;
@@ -35,15 +32,28 @@
 
       button {
         padding: 10px 15px;
-        background-color: #5cb85c;
+        background-color: #68ae4c;
         border: none;
         border-radius: 4px;
         color: white;
         cursor: pointer;
       }
-
       button:hover {
-        background-color: #4cae4c;
+        background-color: #4d8a35;
+      }
+
+      .delete {
+        background-color: rgb(216, 46, 46);
+      }
+      .delete:hover {
+        background-color: #ae4c4c;
+      }
+
+      .update {
+        background-color: rgb(216, 205, 46);
+      }
+      .update:hover {
+        background-color: #aeac4c;
       }
 
       table {
@@ -65,10 +75,60 @@
       tr:hover {
         background-color: #f5f5f5;
       }
+      .actions {
+        display: flex;
+        flex-direction: row;
+        gap: 1rem;
+      }
+      .checkbox-cell {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        height: 100%;
+        padding: 8px;
+        cursor: pointer;
+      }
+
+      .checkbox-cell input {
+        display: none;
+      }
+
+      .checkmark {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #ccc;
+        border-radius: 4px;
+        margin-right: 8px;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+
+      .checkbox-cell input:not(:checked) + .checkmark {
+        background-color: white;
+        border-color: #ccc;
+      }
+
+      .checkbox-cell input:checked + .checkmark {
+        background-color: #007bff;
+        border-color: #007bff;
+      }
+
+      .checkbox-cell input:checked + .checkmark::after {
+        content: "";
+        position: absolute;
+        left: 6px;
+        top: 2px;
+        width: 5px;
+        height: 10px;
+        border: solid white;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+      }
     </style>
   </head>
   <body>
-    <form action="/submit" method="POST">
+    <form class="todo-actions" action="/submit" method="POST">
       <h1>TO-DO List</h1>
       <input type="text" name="title" placeholder="Add a new task" required />
       <input type="date" name="dueDate" placeholder="Add a due date" required />
@@ -76,25 +136,70 @@
       <button type="submit">Add</button>
     </form>
 
-    <table>
+    <table class="todo-list">
       <thead>
         <tr>
           <th>Title</th>
           <th>Due-Date</th>
-          <th>Status</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         <% tasks.forEach(function(task, index) { %>
         <tr>
-          <td><%= task.title %></td>
+          <td>
+            <form action="/update" method="POST" class="update-form">
+              <input type="hidden" name="index" value="<%= index %>" />
+              <label class="checkbox-cell">
+                <input type="checkbox" name="completed" value="true" <%=
+                task.completed ? 'checked' : '' %> onchange="this.form.submit()"
+                />
+                <span class="checkmark"></span>
+                <%= task.title %>
+              </label>
+            </form>
+          </td>
           <td><%= task.dueDate %></td>
           <td>
-            <input type="checkbox" <%= task.completed ? 'checked' : '' %> />
-            <form action="/delete" method="POST" id="delete">
+            <div class="actions">
+              <form action="/delete" method="POST" style="display: inline">
+                <input type="hidden" name="index" value="<%= index %>" />
+                <button class="delete" type="submit">Delete</button>
+              </form>
+
+              <!-- Edit button (navigates to /tasks?edit=index) -->
+              <form action="/tasks" method="GET" style="display: inline">
+                <input type="hidden" name="edit" value="<%= index %>" />
+                <button class="update" type="submit">Edit</button>
+              </form>
+            </div>
+
+            <!-- Show edit form only if this task is being edited -->
+            <% if (editIndex === index) { %>
+            <form
+              action="/update"
+              method="POST"
+              class="edit-form"
+              style=<%=editIndex === index ? '' : 'display:none;' %>
+            >
               <input type="hidden" name="index" value="<%= index %>" />
-              <button type="submit">Delete</button>
+              <input
+                type="text"
+                name="title"
+                value="<%= task.title %>"
+                required
+              />
+              <input
+                type="date"
+                name="dueDate"
+                value="<%= task.dueDate %>"
+                required
+              />
+              <button type="submit">Save</button>
+              <a href="/tasks"><button type="button">Cancel</button></a>
             </form>
+
+            <% } %>
           </td>
         </tr>
         <% }); %>
