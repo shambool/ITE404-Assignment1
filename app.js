@@ -44,7 +44,12 @@ app.post("/login", (req, res) => {
   );
 
   if (user) {
-    res.cookie("userId", user.id, { httpOnly: true });
+    res.cookie("userId", user.id, 
+      {
+        httpOnly: true,
+        maxAge: 1000 * 60 
+      }
+        );
     res.redirect("/tasks");
   } else {
     res.send(
