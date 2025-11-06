@@ -2,8 +2,13 @@ const express = require("express");
 const path = require("path");
 const cookieParser = require("cookie-parser");
 const app = express();
+const crypto = require('crypto');
+const { encryptCookieNodeMiddleware } = require('encrypt-cookie');
+
 
 const port = 8081;
+const SIGNATURE_SECRET = "temporary_signature_secret_123";
+const ENCRYPTION_SECRET = "temporary_encryption_secret_456";
 
 // Setup view engine and middleware
 app.set("view engine", "ejs");
@@ -11,12 +16,22 @@ app.set("views", path.join(__dirname, "views"));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+
+
+
+app.use(cookieParser(SIGNATURE_SECRET))
+app.use(encryptCookieNodeMiddleware(ENCRYPTION_SECRET));
+
+
 
 // --- Mock Users ---
 const users = [
   { id: 1, username: "Sham", password: "123" },
   { id: 2, username: "Yad", password: "123" },
+  { id: 3, username: "Raghib", password: "123" },
+  { id: 4, username: "Elissa", password: "123" },
+  { id: 5, username: "Shirin", password: "123" },
+  { id: 6, username: "Sadam", password: "123" },
 ];
 
 // --- Mock Tasks ---
@@ -47,7 +62,10 @@ app.post("/login", (req, res) => {
     res.cookie("userId", user.id, 
       {
         httpOnly: true,
-        maxAge: 1000 * 60 
+        maxAge: 1000 * 60 * 5, // wabzanm 5 minutes? check dwaii
+        signed: true,
+        secure: false,
+        sameSite: 'strict'
       }
         );
     res.redirect("/tasks");
@@ -60,18 +78,19 @@ app.post("/login", (req, res) => {
 
 // --- Tasks Page ---
 app.get("/tasks", (req, res) => {
-  const userId = parseInt(req.cookies.userId);
+  const userId = parseInt(req.signedCookies.userId);
   if (!userId) return res.redirect("/");
 
   const userTasks = tasks.filter((t) => t.userId === userId);
   const editIndex = req.query.edit ? parseInt(req.query.edit) : null;
+  
 
   res.render("tasks", { tasks: userTasks, editIndex });
 });
 
 // --- Add Task ---
 app.post("/submit", (req, res) => {
-  const userId = parseInt(req.cookies.userId);
+  const userId = parseInt(req.signedCookies.userId);
   if (!userId) return res.redirect("/");
 
   const { title, dueDate } = req.body;
@@ -109,7 +128,7 @@ try {
 // -- update task
 app.post("/update", (req, res) => {
   const { index, completed, title, dueDate } = req.body;
-  const userId = parseInt(req.cookies.userId);
+  const userId = parseInt(req.signedCookies.userId);
 
   if (!userId) return res.status(401).send("Unauthorized");
   const userTasks = [];
