@@ -164,6 +164,7 @@
         </tr>
       </thead>
       <tbody>
+        <% if (tasks) { %>
         <% tasks.forEach(function(task, index) { %>
         <tr>
           <td>
@@ -219,6 +220,7 @@
           </td>
         </tr>
         <% }); %>
+        <%}%>
       </tbody>
     </table>
   </body>
