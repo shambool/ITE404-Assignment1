@@ -1,159 +1,179 @@
+// names: Sham Diyar Mohammed Sidiq, Yad Hawar Hiwa
+// emails: sd21180@auis.edu.krd, yh21145@auis.edu.krd
+
+/*
+References:
+
+  HTML Hidden Input:
+   https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/hidden
+   - Used to store data (task index) that is submitted with the form but not visible to the user.
+
+  HTML Checkbox Input:
+   https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/checkbox
+   - Used to represent completion status of a task.
+
+  HTML Form onChange Event:
+   https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/change_event
+   - onchange="this.form.submit()" automatically submits the form when the checkbox state changes.
+
+   Express.js Documentation
+   https://expressjs.com/
+   - for request handling.
+
+  HTTP Cookies and Security
+   https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies
+   - for cookie attributes (httpOnly, sameSite, maxAge, etc..).
+
+   JavaScript Array Methods
+   https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
+   - for Array methods used (filter, push, splice, find, forEach).
+
+   Express.js Cookie Parser:
+   https://www.npmjs.com/package/cookie-parser
+   - req.signedCookies provides access to cookies that are signed with a secret key.
+
+   Dynamic Property Access in JavaScript:
+   https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Property_accessors
+   - Using square brackets `[]` to access object properties.
+
+*/
 const express = require("express");
 const path = require("path");
 const cookieParser = require("cookie-parser");
+const { encryptCookieNodeMiddleware } = require("encrypt-cookie");
+
 const app = express();
-const crypto = require('crypto');
-const { encryptCookieNodeMiddleware } = require('encrypt-cookie');
-
-
 const port = 8081;
-const SIGNATURE_SECRET = "temporary_signature_secret_123";
-const ENCRYPTION_SECRET = "temporary_encryption_secret_456";
 
-// Setup view engine and middleware
+const SIGNATURE_SECRET =
+  "6d287f9abb1b7a9d710f4997677a2a0630ee4d50b78fa4878a88f0531e914785";
+const ENCRYPTION_SECRET =
+  "6b01aa99b04e107398d1260c04606b361e0a69d7bd96d96008b9af8eb1fd18c3";
+
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-
-
-app.use(cookieParser(SIGNATURE_SECRET))
+app.use(cookieParser(SIGNATURE_SECRET));
 app.use(encryptCookieNodeMiddleware(ENCRYPTION_SECRET));
 
-
-
-// --- Mock Users ---
 const users = [
   { id: 1, username: "Sham", password: "123" },
   { id: 2, username: "Yad", password: "123" },
-  { id: 3, username: "Raghib", password: "123" },
-  { id: 4, username: "Elissa", password: "123" },
-  { id: 5, username: "Shirin", password: "123" },
-  { id: 6, username: "Sadam", password: "123" },
+  { id: 3, username: "Bob", password: "123" },
+  { id: 4, username: "Alice", password: "123" },
+  { id: 5, username: "Danny", password: "123" },
 ];
 
-// --- Mock Tasks ---
-const tasks = [
-  {
-    id: 0,
-    userId: 1,
-    title: "A",
-    dueDate: "6/9/6969",
-    completed: true,
-  },
-];
+function saveUserTasks(res, userId, tasks) {
+  res.cookie(`tasks_user_${userId}`, tasks, {
+    httpOnly: true,
+    signed: true,
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+    secure: false,
+    sameSite: "strict",
+  });
+}
 
-// --- Login Page ---
+// Login Page
 app.get("/", (req, res) => {
-  res.render("index"); // login page
+  res.render("index", { users, error: null });
 });
 
-// --- Login POST ---
+// Login POST
 app.post("/login", (req, res) => {
-  console.log("Login attempt:", req.body);
   const { username, password } = req.body;
   const user = users.find(
     (u) => u.username === username && u.password === password
   );
 
   if (user) {
-    res.cookie("userId", user.id, 
-      {
-        httpOnly: true,
-        maxAge: 1000 * 60 * 5, // wabzanm 5 minutes? check dwaii
-        signed: true,
-        secure: false,
-        sameSite: 'strict'
-      }
-        );
+    res.cookie("userId", user.id, {
+      httpOnly: true,
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+      signed: true,
+      secure: false,
+      sameSite: "strict",
+    });
     res.redirect("/tasks");
   } else {
-    res.send(
-      "Invalid username or password <br> hint:<br> username: Sham <br> password: 123"
-    );
+    res.render("index", { users, error: "Incorrect username or password." });
   }
 });
 
-// --- Tasks Page ---
+// Tasks Page
 app.get("/tasks", (req, res) => {
   const userId = parseInt(req.signedCookies.userId);
   if (!userId) return res.redirect("/");
 
-  const userTasks = tasks.filter((t) => t.userId === userId);
+  const userTasks = req.signedCookies[`tasks_user_${req.signedCookies.userId}`];
   const editIndex = req.query.edit ? parseInt(req.query.edit) : null;
-  
+  const user = users.find((u) => u.id === userId);
+  const userName = user ? user.username : "Unknown";
 
-  res.render("tasks", { tasks: userTasks, editIndex });
+  res.render("tasks", { tasks: userTasks, editIndex, userName });
 });
 
-// --- Add Task ---
+// Add Task
 app.post("/submit", (req, res) => {
   const userId = parseInt(req.signedCookies.userId);
   if (!userId) return res.redirect("/");
 
   const { title, dueDate } = req.body;
-  const newTask = {
+  const tasks = req.signedCookies[`tasks_user_${req.signedCookies.userId}`];
+  tasks.push({
     id: tasks.length,
-    userId: userId,
-    title: title || "Untitled",
-    dueDate: dueDate || "No due date",
+    title: title,
+    dueDate: dueDate,
     completed: false,
-  };
+  });
 
-  console.log(newTask.id);
-
-  tasks.push(newTask);
+  saveUserTasks(res, userId, tasks);
   res.redirect("/tasks");
 });
 
-// --- Delete Task ---
+// Delete Task
 app.post("/delete", (req, res) => {
+  const userId = parseInt(req.signedCookies.userId);
+  if (!userId) return res.redirect("/");
+
   const index = parseInt(req.body.index);
+  const tasks = req.signedCookies[`tasks_user_${req.signedCookies.userId}`];
+
   if (!isNaN(index) && index >= 0 && index < tasks.length) {
     tasks.splice(index, 1);
+    tasks.forEach((t, i) => (t.id = i)); // Reassign the task IDs to keep them sequential
   }
+
+  saveUserTasks(res, userId, tasks);
   res.redirect("/tasks");
 });
 
-try {
-  app.listen(port, () =>
-    console.log(`✅ app is running on http://localhost:${port}`)
-  );
-} catch (err) {
-  console.error("Error starting server:", err);
-}
-
-// -- update task
+// Update Task
 app.post("/update", (req, res) => {
-  const { index, completed, title, dueDate } = req.body;
   const userId = parseInt(req.signedCookies.userId);
+  if (!userId) return res.redirect("/");
 
-  if (!userId) return res.status(401).send("Unauthorized");
-  const userTasks = [];
-  for (let i = 0; i < tasks.length; i++) {
-    if (userId === tasks[i].userId) {
-      userTasks.push(tasks[i]);
-    }
-  }
-
+  const { index, completed, title, dueDate } = req.body;
+  const tasks = req.signedCookies[`tasks_user_${req.signedCookies.userId}`];
   const i = parseInt(index);
-  const task = userTasks.find((t, idx) => idx === i && t.userId === userId);
-  if (!task) return res.status(404).send("Task not found");
 
-  // Only update completed if it exists in this request
-  if (completed !== undefined) {
-    task.completed = completed === "true";
-  } else {
-    task.completed = false;
-  }
+  if (isNaN(i) || i < 0 || i >= tasks.length)
+    return res.status(404).send("Task not found");
 
-  // Only update title/dueDate if they exist in this request
+  if (completed !== undefined) tasks[i].completed = completed === "true";
+  else tasks[i].completed = false;
+
   if (title !== undefined && dueDate !== undefined) {
-    task.title = title.trim();
-    task.dueDate = dueDate;
+    tasks[i].title = title.trim(); // remove white space after the last character
+    tasks[i].dueDate = dueDate;
   }
 
+  saveUserTasks(res, userId, tasks);
   res.redirect("/tasks");
 });
+
+app.listen(port, () =>
+  console.log(`Server is running on http://localhost:${port}`)
+);

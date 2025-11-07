@@ -125,16 +125,35 @@
         border-width: 0 2px 2px 0;
         transform: rotate(45deg);
       }
+      .login{
+        background-color: #007bff;
+      }
+      .container{
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
     </style>
   </head>
   <body>
+    
+    <div class="container">
+
     <form class="todo-actions" action="/submit" method="POST">
       <h1>TO-DO List</h1>
+    <h2>user: <%=userName%></h2>
+
       <input type="text" name="title" placeholder="Add a new task" required />
       <input type="date" name="dueDate" placeholder="Add a due date" required />
 
       <button type="submit">Add</button>
     </form>
+
+    <form class="todo-actions" action="/" method="GET">
+      <button class="login" type="submit">Back to login</button>
+    </form>
+</div>
 
     <table class="todo-list">
       <thead>
@@ -151,8 +170,7 @@
             <form action="/update" method="POST" class="update-form">
               <input type="hidden" name="index" value="<%= index %>" />
               <label class="checkbox-cell">
-                <input type="checkbox" name="completed" value="true" <%=
-                task.completed ? 'checked' : '' %> onchange="this.form.submit()"
+              <input type="checkbox" name="completed" value="true" <%=task.completed ? 'checked' : '' %> onchange="this.form.submit()"
                 />
                 <span class="checkmark"></span>
                 <%= task.title %>
@@ -167,14 +185,12 @@
                 <button class="delete" type="submit">Delete</button>
               </form>
 
-              <!-- Edit button (navigates to /tasks?edit=index) -->
               <form action="/tasks" method="GET" style="display: inline">
                 <input type="hidden" name="edit" value="<%= index %>" />
                 <button class="update" type="submit">Edit</button>
               </form>
             </div>
 
-            <!-- Show edit form only if this task is being edited -->
             <% if (editIndex === index) { %>
             <form
               action="/update"
